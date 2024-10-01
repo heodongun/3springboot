@@ -199,9 +199,7 @@ response
 성공
 -response http status-200(ok){
          code : "SU",
-         message : "Success.",
-    }
-
+ㅆ
 실패
 -데이터 베이스 에러 http status-500(internal Server Error){
                     code : "DE"
