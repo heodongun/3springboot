@@ -1,0 +1,247 @@
+CREATE TABLE board
+(
+    board_number INT NOT NULL AUTO_INCREMENT COMMENT '게시물 번호',
+    title TEXT NOT NULL COMMENT '게시물 제목',
+    content TEXT NOT NULL COMMENT '게시물 내용',
+    write_datetime DATETIME NOT NULL COMMENT '게시물 작성 날짜 및 시간',
+    favorite_count INT NOT NULL DEFAULT 0 COMMENT '게시물 좋아요 수',
+    comment_count INT NOT NULL DEFAULT 0 COMMENT '게시물 댓글 수',
+    view_count INT NOT NULL DEFAULT 0 COMMENT '게시물 조회 수',
+    writer_email VARCHAR(50) NOT NULL COMMENT '게시물 작성자 이메일',
+    PRIMARY KEY (board_number)
+) COMMENT='게시물 테이블';
+
+CREATE TABLE comment (
+                         comment_number INT NOT NULL AUTO_INCREMENT COMMENT '댓글 번호',
+                         content TEXT NOT NULL COMMENT '댓글 내용',
+                         write_datetime DATETIME NOT NULL COMMENT '작성 날짜 및 시간',
+                         user_email VARCHAR(50) NOT NULL COMMENT '사용자 이메일',
+                         board_number INT NOT NULL COMMENT '게시물 번호',
+                         PRIMARY KEY (comment_number)
+) COMMENT '댓글 테이블';
+
+create table favorite(
+    user_email varchar(50) not null comment '사용자 이메일',
+    board_number int not null comment '게시물 번호',
+    primary key (user_email,board_number)
+)comment '좋아요 테이블';
+
+create table image(
+    board_number int not null comment '게시물 번호',
+    image text not null comment '게시물 이미지 URL'
+)comment '게시물 이미지 테이블';
+
+create table search_log(
+    sequence int not null auto_increment comment '시퀀스',
+    search_word text not null comment '검색어',
+    relation_word text null comment '관련 검색어',
+    relation boolean not null comment '관련 검색어 여부',
+    primary key (sequence)
+)comment '검색 기록 테이블';
+
+create table user(
+    email varchar(50) not null comment '사용자 이메일',
+    password varchar(100) not null comment '사용자 비밀번호',
+    nickname varchar(20) not null unique comment '사용자 닉네임',
+    tel_number varchar(15) not null comment '사용자 휴대전화번호',
+    address text not null comment "사용자 주소",
+    address_detail text null comment '사용자 상세 주소',
+    profile_image text null comment '사용자 프로필 사진 URL',
+    primary key (email)
+) comment '사용자 테이블';
+
+alter TABLE image
+    ADD CONSTRAINT FK_board_TO_image
+        FOREIGN KEY (board_number)
+        REFERENCES board(board_number);
+
+ALTER TABLE board
+    ADD CONSTRAINT FK_user_TO_board
+        FOREIGN KEY (writer_email)
+        REFERENCES user(email);
+
+ALTER TABLE favorite
+    ADD CONSTRAINT FK_user_TO_favorite
+        FOREIGN KEY (user_email)
+        REFERENCES user(email);
+
+ALTER TABLE favorite
+    ADD CONSTRAINT FK_board_TO_favorite
+        FOREIGN KEY (board_number)
+        REFERENCES board(board_number);
+
+ALTER TABLE comment
+    ADD CONSTRAINT FK_user_TO_comment
+        FOREIGN KEY (user_email)
+        REFERENCES user(email);
+
+ALTER TABLE comment
+    ADD CONSTRAINT FK_board_TO_comment
+        FOREIGN KEY (board_number)
+        REFERENCES board(board_number);
+
+CREATE USER 'developer'@'*' IDENTIFIED BY 'p!ssw0rd';
+
+
+
+GRANT SELECT,UPDATE,DELETE,INSERT
+on board.*
+TO 'developer'@'%';
+
+insert into
+user values
+('email@email.com','P!ssw0rd','nickname','01012345678','부산광역시 부산진구','롯데백화점',null);
+
+select * from user where email='email@email.com';
+
+insert into board(title,content,write_datetime,favorite_count,comment_count,view_count,writer_email)
+values('제목입니다','내용입니다','2023-08-20 20:54',0,0,0,'email@email.com');
+
+insert into
+image values(1,'url');
+
+
+insert into
+comment(content,write_datetime,user_email,board_number)
+values ('반갑습니다','2023-08-20 20:57','email@email.com',1);
+
+update comment set comment_number=comment_number+1 where board_number=1;
+
+alter table comment
+    change comment_number comment_number int not null AUTO_INCREMENT comment '댓글번호';
+
+
+insert into
+favorite values ('email@email.com','1');
+
+delete from favorite where user_email='email@email.com' AND board_number=1;
+update board set comment_count=comment_count+1 where board_number=1;
+
+update board set favorite_count=favorite_count+1 where board_number=1;
+update board set favorite_count=favorite_count-1 where board_number=1;
+
+
+update board set title ='수정 제목입니다',content='수정 내용입니다' where board_number=1;
+
+delete from image where board_number=1;
+
+insert into
+image values(1,'url');
+
+delete from comment where board_number=1;
+delete from favorite where board_number=1;
+delete from board where board_number=1;
+
+
+select * from board_list_view
+where board_number=1;
+#
+#
+# select image
+# from image
+# where board_number=1;
+
+#최신게시물 리스트 불러오기
+select * from board_list_view
+order by write_datetime desc
+limit 0,5;#0번부터 5개 뽑아라
+
+create view board_list_view as
+select
+    b.board_number as board_number,
+    b.title as title,
+    b.content as content,
+    i.image as title_image,
+    b.favorite_count as favorite_count,
+    b.view_count as view_count,
+    b.comment_count as comment_count,
+    b.write_datetime as write_datetime,
+    b.writer_email as writer_email,
+    u.nickname as writer_nickname,
+    u.profile_image as writer_profile_image
+from board as b
+         inner join user as u
+                    on b.writer_email=u.email
+         left join(select board_number,ANY_VALUE(image) as image from image group by  board_number) as i
+                  on b.board_number=i.board_number;
+
+select
+    u.email as email,
+    u.nickname as nickname,
+    u.profile_image
+from favorite as f
+inner join user as u
+on f.user_email=u.email
+where f.board_number=1;
+
+
+select u.nickname       as nickname,
+       u.profile_image  as profile_image,
+       c.write_datetime as write_datetime,
+       c.content        as content
+from comment as c
+         inner join user as u
+                    on c.user_email = u.email
+where c.board_number = 1
+order by write_datetime desc;
+
+
+# #최신게시물 리스트 불러오기
+select * from board_list_view
+where title like '%수정%' or content like '%제목%'
+order by write_datetime desc;
+
+#주간 사위 3 게시물
+select * from board_list_view
+where write_datetime between '2023-08-14 00:00' and '2023-08-20 21":48'
+order by favorite_count desc,comment_count desc,view_count desc, write_datetime desc
+limit 3;
+
+# #특정유저 게시물
+select * from board_list_view
+where writer_email='email@email.com'
+order by write_datetime desc;#0번부터 5개 뽑아라
+
+select *
+from board_list_view
+where writer_email='email@email.com'
+order by write_datetime desc;
+
+# 인기 검색어 리스트
+select search_word,count(search_word) as count
+from search_log
+where relation is false
+group by search_word
+order by count desc
+limit 15;
+
+#관련검색어 리스트
+select relation_word,count(relation_word) as count
+from search_log
+where search_word='검색어'
+group by relation_word
+order by count desc
+limit 15;
+
+#유저 정보 불러오기/로그인 유저 정보 불러오기
+select *
+from user
+where email='email@email.com';
+
+#닉네임수정
+update user set nickname='수정 닉네임' where email='email@email.com';
+
+#프로필 이미지 수정
+update user set profile_image='url2' where email='email@email.com';
+
+select * from user;
+
+alter user 'developer'@'*'
+    identified with 'caching_sha2_password' by 'p!ssw0rd';
+
+CREATE USER 'developer'@'%' IDENTIFIED BY 'P!ssw0rd';
+
+ALTER USER 'developer'@'*' IDENTIFIED WITH 'caching_sha2_password' BY 'p!ssw0rd';
+GRANT ALL PRIVILEGES ON board.* TO 'developer'@'%';
+FLUSH PRIVILEGES;
+
